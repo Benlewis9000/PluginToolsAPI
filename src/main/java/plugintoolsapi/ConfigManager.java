@@ -16,6 +16,7 @@ import java.util.Map;
 public class ConfigManager {
 
     private final JavaPlugin plugin;
+    private final Logger logger;
 
     private Map<String, FileConfiguration> configsMap;
 
@@ -24,11 +25,13 @@ public class ConfigManager {
      * // todo: force this with a manager factory that enforces a singleton pattern?
      * // todo: or even just a static method? no - need an object to hold a singleton without static context
      * @param plugin plugin
+     * @param logger logger for plugin
      * @param fileNames Map where key is config filename, and boolean whether that config is critical
      */
-    public ConfigManager(JavaPlugin plugin, Map<String, Boolean> fileNames){
+    public ConfigManager(JavaPlugin plugin, Logger logger, Map<String, Boolean> fileNames){
 
         this.plugin = plugin;
+        this.logger = logger;
 
         loadConfigs(fileNames);
 
@@ -100,8 +103,16 @@ public class ConfigManager {
         FileConfiguration config = new YamlConfiguration();
 
         File file = new File(plugin.getDataFolder(), fileName);
-        if (!file.exists()) file = new File(getClass().getResource(fileName).getFile());
-        if(!file.exists()) file = new File(fileName);
+        if (!file.exists()) {
+            logger.debug("File not found in getDataFolder.")
+                    .debug("Checking resources...");
+            file = new File(getClass().getResource(fileName).getFile());
+        }
+        if(!file.exists()) {
+            logger.debug("File not found in resources.")
+                    .debug("Creating new...");
+            file = new File(fileName);
+        }
 
         try {
 
@@ -111,19 +122,19 @@ public class ConfigManager {
         // Exception handling - disable plugin if config is critical
         catch(InvalidConfigurationException e){
 
-            plugin.getLogger().warning("Invalid configuration \"" + fileName + "\"!");
+            logger.warn("Invalid configuration \"" + fileName + "\"!");
             Utils.criticalFailure(plugin);
 
         }
         catch(FileNotFoundException e){
 
-            plugin.getLogger().info("Could not find file \"" + fileName + "\"! Attempting to create new...");
+            logger.log("Could not find file \"" + fileName + "\"! Attempting to create new...");
 
 
         }
         catch (IOException e){
 
-            plugin.getLogger().info("Failed to read file \"" + fileName + "\"! (IOException)");
+            logger.log("Failed to read file \"" + fileName + "\"! (IOException)");
             Utils.criticalFailure(plugin);
 
         }
